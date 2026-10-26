@@ -10,6 +10,8 @@
  *     (no polling, no extra threads) and debounced with a timer.
  *
  * Build flags define UNICODE, WIN32_LEAN_AND_MEAN, _WIN32_WINNT=0x0A00.
+ * Headers target Win10, but every post-Win7 API is either resolved at
+ * runtime or fails harmlessly, so the binary runs on Windows 7 SP1+.
  */
 #include <windows.h>
 #include <shellapi.h>
@@ -255,6 +257,44 @@ static LRESULT CALLBACK ctrl_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     return DefWindowProcW(hwnd, msg, wp, lp);
 }
 
+/* ---------- DPI awareness ----------
+ * Resolved at runtime so the exe still launches on Windows 7 / 8.1:
+ *   Win10 1703+  per-monitor v2   (user32!SetProcessDpiAwarenessContext)
+ *   Win8.1+      per-monitor v1   (shcore!SetProcessDpiAwareness)
+ *   Win7         system aware     (user32!SetProcessDPIAware)
+ */
+typedef BOOL    (WINAPI *PFN_SetProcessDpiAwarenessContext)(HANDLE);
+typedef HRESULT (WINAPI *PFN_SetProcessDpiAwareness)(int);
+typedef BOOL    (WINAPI *PFN_SetProcessDPIAware)(void);
+
+static void set_dpi_awareness(void) {
+    HMODULE user32 = GetModuleHandleW(L"user32.dll");
+    HMODULE shcore;
+
+    if (user32) {
+        PFN_SetProcessDpiAwarenessContext f = (PFN_SetProcessDpiAwarenessContext)
+            (void *)GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+        if (f && f((HANDLE)-4 /* PER_MONITOR_AWARE_V2 */)) return;
+    }
+
+    /* shcore.dll only exists on 8.1+, where LOAD_LIBRARY_SEARCH_SYSTEM32 is
+       always supported, so this can never be hijacked via the app directory. */
+    shcore = LoadLibraryExW(L"shcore.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (shcore) {
+        PFN_SetProcessDpiAwareness f = (PFN_SetProcessDpiAwareness)
+            (void *)GetProcAddress(shcore, "SetProcessDpiAwareness");
+        HRESULT hr = f ? f(2 /* PROCESS_PER_MONITOR_DPI_AWARE */) : E_FAIL;
+        if (SUCCEEDED(hr)) return; /* keep shcore loaded; it's tiny */
+        FreeLibrary(shcore);
+    }
+
+    if (user32) {
+        PFN_SetProcessDPIAware f = (PFN_SetProcessDPIAware)
+            (void *)GetProcAddress(user32, "SetProcessDPIAware");
+        if (f) f();
+    }
+}
+
 /* ---------- entry ---------- */
 
 static int run(void) {
@@ -267,8 +307,8 @@ static int run(void) {
     mutex = CreateMutexW(NULL, TRUE, MUTEX_NAME);
     if (!mutex || GetLastError() == ERROR_ALREADY_EXISTS) return 0;
 
-    /* Physical pixels on every monitor, so 1px lines stay 1px. Win10 1703+. */
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    /* Physical pixels on every monitor, so 1px lines stay 1px. */
+    set_dpi_awareness();
 
     config_init();
     config_load(&g_cfg);
@@ -328,7 +368,9 @@ done:
     return (int)msg.wParam;
 }
 
-/* No CRT: this is the process entry point (see build files). */
-void WINAPI entry(void) {
+/* No CRT: this is the process entry point (see build files).
+   __cdecl so the x86 symbol is plain "_entry" for both MSVC and MinGW;
+   the calling convention is irrelevant on x64 and ARM64. */
+void __cdecl entry(void) {
     ExitProcess((UINT)run());
 }

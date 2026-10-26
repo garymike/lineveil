@@ -2,7 +2,8 @@
 
 A featherweight scanline overlay for the Windows desktop.
 
-- ~14 KB executable, no C runtime, no dependencies beyond Windows system DLLs
+- 12 to 14 KB executable, no C runtime, no dependencies beyond Windows system DLLs
+- Runs on Windows 7 SP1 through 11, on x64, x86, and ARM64
 - Zero CPU at idle: the pattern is drawn once and composited by DWM
 - No screen capture: the app never reads your screen, so no recording permission is involved
 - Click-through, always on top, one overlay per monitor, per-monitor DPI aware
@@ -35,17 +36,19 @@ Tray menu toggles are runtime only. The INI holds startup state.
 
 ## Build
 
-**MSVC:** run `build.bat` (finds Visual Studio automatically).
+**MSVC:** `build.bat [x64|x86|arm64]` (finds Visual Studio automatically, default x64).
 
-**MinGW-w64** (MSYS2 or cross-compile from Linux/macOS): `make`
+**MinGW-w64** (MSYS2 or cross-compile from Linux/macOS): `make ARCH=x64|x86|arm64`. ARM64 needs [llvm-mingw](https://github.com/mstorsjo/llvm-mingw).
 
-Output: `build\scanlite.exe`
+Output: `build\scanlite-<arch>.exe`
 
 ## Known limits
 
 - Exclusive fullscreen games bypass DWM, so the overlay won't appear there. Borderless fullscreen works.
 - UAC prompts (secure desktop) and some system UI can appear above it.
-- Requires Windows 10 1703 or later.
+- DPI handling by Windows version: per-monitor v2 on Windows 10 1703+, per-monitor v1 on 8.1, system-aware on 7. On Windows 7, mixed-DPI setups aren't possible anyway.
+- Hide-from-capture needs Windows 10 2004+. On older versions the option is ignored.
+- HDR displays may render lines slightly differently than SDR. Not yet tested.
 
 ## Roadmap
 

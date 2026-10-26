@@ -11,6 +11,10 @@ permissions:
 jobs:
   msvc:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, x86, arm64]
     steps:
       # TODO: pin actions to full commit SHAs before first release
       - uses: actions/checkout@v4
@@ -18,23 +22,27 @@ jobs:
           persist-credentials: false
       - name: Build (MSVC, no CRT)
         shell: cmd
-        run: build.bat
+        run: build.bat ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
-          name: scanlite-msvc-x64
-          path: build/scanlite.exe
+          name: scanlite-msvc-${{ matrix.arch }}
+          path: build/scanlite-${{ matrix.arch }}.exe
 
   mingw:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, x86]
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install MinGW-w64
-        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
       - name: Build (MinGW cross)
-        run: make && ls -l build/scanlite.exe
+        run: make ARCH=${{ matrix.arch }} && ls -l build/
       - uses: actions/upload-artifact@v4
         with:
-          name: scanlite-mingw-x64
-          path: build/scanlite.exe
+          name: scanlite-mingw-${{ matrix.arch }}
+          path: build/scanlite-${{ matrix.arch }}.exe

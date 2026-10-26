@@ -9,6 +9,20 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Unit tests (ASan + UBSan)
+        run: make test
+      - name: Fuzz hotkey parser (30s)
+        run: |
+          v=$(clang -dumpversion | cut -d. -f1)
+          sudo apt-get update -qq && sudo apt-get install -y -qq "libclang-rt-$v-dev"
+          make fuzz FUZZ_TIME=30
+
   msvc:
     runs-on: windows-latest
     strategy:
@@ -16,17 +30,17 @@ jobs:
       matrix:
         arch: [x64, x86, arm64]
     steps:
-      # TODO: pin actions to full commit SHAs before first release
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Build (MSVC, no CRT)
         shell: cmd
         run: build.bat ${{ matrix.arch }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lineveil-msvc-${{ matrix.arch }}
           path: build/lineveil-${{ matrix.arch }}.exe
+          if-no-files-found: error
 
   mingw:
     runs-on: ubuntu-latest
@@ -35,14 +49,24 @@ jobs:
       matrix:
         arch: [x64, x86]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install MinGW-w64
-        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 \
+                                      gcc-mingw-w64-i686 g++-mingw-w64-i686
       - name: Build (MinGW cross)
-        run: make ARCH=${{ matrix.arch }} && ls -l build/
-      - uses: actions/upload-artifact@v4
+        run: make ARCH=${{ matrix.arch }}
+      - name: Check imports stay minimal
+        run: |
+          objdump -p build/lineveil-${{ matrix.arch }}.exe | grep "DLL Name" | tee imports.txt
+          if grep -viE "kernel32|user32|gdi32|shell32" imports.txt; then
+            echo "::error::Unexpected DLL import"; exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lineveil-mingw-${{ matrix.arch }}
           path: build/lineveil-${{ matrix.arch }}.exe
+          if-no-files-found: error

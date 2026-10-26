@@ -8,6 +8,9 @@
 #ifdef _MSC_VER
 #pragma function(memset)
 #pragma function(memcpy)
+/* MSVC emits a reference to this whenever floating point is used
+   (the DComp renderer's scale transform). Normally the CRT defines it. */
+int _fltused = 0;
 #endif
 
 void *memset(void *dst, int c, size_t n) {

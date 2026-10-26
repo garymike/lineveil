@@ -42,13 +42,15 @@ static const char DEFAULT_INI[] =
     "; 1 = hide overlay from screenshots and screen sharing (Windows 10 2004+)\r\n"
     "exclude_from_capture=0\r\n"
     "\r\n"
-    "; gdi (default) or dcomp (experimental, not implemented yet)\r\n"
+    "; gdi (default, works everywhere) or dcomp (Windows 8+, experimental:\r\n"
+    "; uses far less memory in Windows itself, falls back to gdi on failure)\r\n"
     "renderer=gdi\r\n"
     "\r\n"
-    "; Toggle hotkey. Modifiers: Alt=1 Ctrl=2 Shift=4 Win=8 (add them).\r\n"
-    "; Key is a decimal virtual-key code. Default Ctrl+Alt+F12.\r\n"
-    "hotkey_mods=3\r\n"
-    "hotkey_vk=123\r\n";
+    "; Toggle hotkey, e.g. Ctrl+Alt+F12, Shift+Win+S, or None.\r\n"
+    "; Modifiers: Ctrl, Alt, Shift, Win. Keys: A-Z, 0-9, F1-F24, Num0-Num9,\r\n"
+    "; Space, Tab, Enter, Esc, Insert, Delete, Home, End, PageUp, PageDown,\r\n"
+    "; Up, Down, Left, Right, Pause, ScrollLock.\r\n"
+    "hotkey=Ctrl+Alt+F12\r\n";
 
 static int clampi(int v, int lo, int hi) {
     if (v < lo) return lo;
@@ -158,6 +160,7 @@ void config_load(Config *c) {
     c->renderer = RENDERER_GDI;
     c->hotkey_mods = MOD_CONTROL | MOD_ALT;
     c->hotkey_vk = VK_F12;
+    hotkey_format(c->hotkey_mods, c->hotkey_vk, c->hotkey_text, 40);
 
     if (!g_have_path) return;
 
@@ -178,8 +181,18 @@ void config_load(Config *c) {
     GetPrivateProfileStringW(SECTION, L"renderer", L"gdi", buf, 32, g_path);
     c->renderer = lstrcmpiW(buf, L"dcomp") == 0 ? RENDERER_DCOMP : RENDERER_GDI;
 
-    c->hotkey_mods = GetPrivateProfileIntW(SECTION, L"hotkey_mods", c->hotkey_mods, g_path) & 0xF;
-    c->hotkey_vk   = (UINT)clampi((int)GetPrivateProfileIntW(SECTION, L"hotkey_vk", c->hotkey_vk, g_path), 1, 254);
+    /* Invalid hotkey text keeps the default rather than disabling the toggle. */
+    {
+        wchar_t hk[64];
+        UINT mods, vk;
+        DWORD n = GetPrivateProfileStringW(SECTION, L"hotkey", L"", hk, 64, g_path);
+        /* n == 63 means the value was truncated: reject rather than parse a prefix. */
+        if (n > 0 && n < 63 && hotkey_parse(hk, &mods, &vk)) {
+            c->hotkey_mods = mods;
+            c->hotkey_vk = vk;
+        }
+        hotkey_format(c->hotkey_mods, c->hotkey_vk, c->hotkey_text, 40);
+    }
 }
 
 const wchar_t *config_path(void) { return g_path; }

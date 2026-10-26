@@ -3,6 +3,10 @@
 
 #include <windows.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum { RENDERER_GDI = 0, RENDERER_DCOMP = 1 };
 
 typedef struct Config {
@@ -14,9 +18,17 @@ typedef struct Config {
     int   vertical;             /* 0 = horizontal lines, 1 = vertical */
     int   exclude_from_capture; /* hide overlay from screenshots/screen share */
     int   renderer;             /* RENDERER_GDI or RENDERER_DCOMP */
-    UINT  hotkey_mods;          /* MOD_ALT=1, MOD_CONTROL=2, MOD_SHIFT=4, MOD_WIN=8 */
-    UINT  hotkey_vk;            /* virtual-key code, decimal (F12 = 123) */
+    UINT  hotkey_mods;          /* MOD_* bits; 0 with hotkey_vk 0 = no hotkey */
+    UINT  hotkey_vk;            /* virtual-key code */
+    wchar_t hotkey_text[40];    /* normalized, e.g. "Ctrl+Alt+F12", for display */
 } Config;
+
+/* Parses "Ctrl+Alt+F12" style text. Returns FALSE (outputs untouched) if invalid.
+   "none" parses to mods=0, vk=0. Exposed for testing. */
+BOOL hotkey_parse(const wchar_t *text, UINT *mods, UINT *vk);
+
+/* Writes a normalized name like "Ctrl+Shift+F9" into out (cap chars). */
+void hotkey_format(UINT mods, UINT vk, wchar_t *out, int cap);
 
 /* Resolves the config path (portable next to exe, else %APPDATA%\lineveil)
    and writes a default file if none exists. */
@@ -30,5 +42,9 @@ const wchar_t *config_dir(void);    /* empty string if unavailable */
 
 /* Returns TRUE if the config file's last-write time changed since the last call. */
 BOOL config_changed(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

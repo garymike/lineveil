@@ -1,5 +1,5 @@
 @echo off
-rem MSVC build, no CRT.
+rem MSVC build, no C/C++ runtime.
 rem   build.bat            -> build\lineveil-x64.exe
 rem   build.bat x86        -> build\lineveil-x86.exe
 rem   build.bat arm64      -> build\lineveil-arm64.exe
@@ -31,16 +31,23 @@ if not defined VSDIR (
 )
 call "%VSDIR%\VC\Auxiliary\Build\vcvarsall.bat" %VCARGS% >nul || exit /b 1
 
-if not exist build\obj-%ARCH% mkdir build\obj-%ARCH%
+set "OBJ=build\obj-%ARCH%"
+if not exist "%OBJ%" mkdir "%OBJ%"
+del /q "%OBJ%\*.obj" "%OBJ%\*.res" 2>nul
 
-rem /SAFESEH:NO on x86: we have no exception handlers and no CRT, so there is
-rem no SEH table to register. CET and ASLR still apply.
-cl /nologo /O1 /Os /GS- /Gs9999999 /W4 /std:c11 ^
-   /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /DWINVER=0x0A00 ^
-   /Fobuild\obj-%ARCH%\ /Fe:build\lineveil-%ARCH%.exe src\*.c ^
-   /link /NODEFAULTLIB /ENTRY:entry /SUBSYSTEM:WINDOWS ^
+set "COMMON=/nologo /c /O1 /Os /GS- /Gs9999999 /W4 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /DWINVER=0x0A00 /Fo%OBJ%\"
+
+cl %COMMON% /std:c11 src\*.c || exit /b 1
+rem C++ only for the DComp renderer (dcomp.h is C++ only). No exceptions,
+rem no RTTI, no thread-safe statics: nothing that needs the C++ runtime.
+cl %COMMON% /std:c++14 /GR- /EHs-c- /Zc:threadSafeInit- src\*.cpp || exit /b 1
+rc /nologo /i res /fo "%OBJ%\lineveil.res" res\lineveil.rc || exit /b 1
+
+rem /SAFESEH:NO on x86: no exception handlers and no CRT, so there is no SEH
+rem table to register. CET and ASLR still apply.
+link /nologo "%OBJ%\*.obj" "%OBJ%\lineveil.res" /OUT:build\lineveil-%ARCH%.exe ^
+   /NODEFAULTLIB /ENTRY:entry /SUBSYSTEM:WINDOWS ^
    /DYNAMICBASE /NXCOMPAT %ARCH_LINK% /OPT:REF /OPT:ICF /DEBUG:NONE ^
-   kernel32.lib user32.lib gdi32.lib shell32.lib
+   kernel32.lib user32.lib gdi32.lib shell32.lib || exit /b 1
 
-if errorlevel 1 exit /b 1
 for %%f in (build\lineveil-%ARCH%.exe) do echo Built %%~ff (%%~zf bytes)

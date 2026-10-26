@@ -4,6 +4,10 @@
 #include <windows.h>
 #include "config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* A renderer owns how pixels reach DWM for one overlay window.
    Window creation, placement, and lifetime stay in main.c. */
 typedef struct Renderer {
@@ -16,5 +20,9 @@ typedef struct Renderer {
 
 extern const Renderer renderer_gdi;
 extern const Renderer renderer_dcomp;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

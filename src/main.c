@@ -50,6 +50,10 @@ static UINT             g_msg_taskbar_created;
 static NOTIFYICONDATAW  g_nid;
 static BOOL             g_hotkey_registered;
 static BOOL             g_reload_pending;
+static HICON            g_tray_icon;
+static BOOL             g_apply_failed;
+
+#define IDI_APP 1 /* matches res/lineveil.rc */
 
 /* ---------- overlays ---------- */
 
@@ -88,6 +92,7 @@ static BOOL CALLBACK monitor_proc(HMONITOR mon, HDC dc, LPRECT rc, LPARAM lp) {
 
     if (!g_renderer->apply(hwnd, w, h, &g_cfg)) {
         DestroyWindow(hwnd);
+        g_apply_failed = TRUE;
         return TRUE;
     }
 
@@ -99,7 +104,17 @@ static BOOL CALLBACK monitor_proc(HMONITOR mon, HDC dc, LPRECT rc, LPARAM lp) {
 static void build_overlays(void) {
     destroy_overlays();
     if (!g_cfg.enabled) return; /* fully torn down: DWM frees its surfaces too */
+
+    g_apply_failed = FALSE;
     EnumDisplayMonitors(NULL, NULL, monitor_proc, 0);
+
+    /* If an optional renderer fails on any monitor (no GPU device, driver
+       trouble), fall back to GDI everywhere rather than show a partial veil. */
+    if (g_apply_failed && g_renderer != &renderer_gdi) {
+        destroy_overlays();
+        g_renderer = &renderer_gdi;
+        EnumDisplayMonitors(NULL, NULL, monitor_proc, 0);
+    }
     apply_capture_affinity();
 }
 
@@ -117,6 +132,8 @@ static void register_hotkey(void) {
         UnregisterHotKey(g_ctrl, ID_HOTKEY);
         g_hotkey_registered = FALSE;
     }
+    if (!g_cfg.hotkey_vk) return; /* hotkey=None */
+    /* Fails if another app owns the combo; the tray menu still works. */
     g_hotkey_registered =
         RegisterHotKey(g_ctrl, ID_HOTKEY, g_cfg.hotkey_mods | MOD_NOREPEAT, g_cfg.hotkey_vk);
 }
@@ -138,8 +155,13 @@ static void tray_add(void) {
     g_nid.uID = 1;
     g_nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     g_nid.uCallbackMessage = WM_TRAY;
-    g_nid.hIcon = LoadIconW(NULL, (LPCWSTR)IDI_APPLICATION); /* TODO: app icon resource */
-    lstrcpynW(g_nid.szTip, APP_NAME, ARRAYSIZE(g_nid.szTip));
+    /* Pick the exact small-icon size from the embedded .ico so it stays crisp. */
+    if (!g_tray_icon)
+        g_tray_icon = (HICON)LoadImageW(g_inst, MAKEINTRESOURCEW(IDI_APP), IMAGE_ICON,
+                                        GetSystemMetrics(SM_CXSMICON),
+                                        GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+    g_nid.hIcon = g_tray_icon ? g_tray_icon : LoadIconW(NULL, (LPCWSTR)IDI_APPLICATION);
+    lstrcpynW(g_nid.szTip, L"Lineveil", ARRAYSIZE(g_nid.szTip));
     Shell_NotifyIconW(NIM_ADD, &g_nid);
 }
 
@@ -155,10 +177,17 @@ static void toggle(void) {
 static void tray_menu(void) {
     POINT pt;
     UINT cmd;
+    wchar_t label[64];
     HMENU m = CreatePopupMenu();
     if (!m) return;
 
-    AppendMenuW(m, MF_STRING | (g_cfg.enabled ? MF_CHECKED : 0), IDM_TOGGLE, L"Scanlines on");
+    /* "Scanlines on<TAB>Ctrl+Alt+F12": the tab right-aligns the shortcut. */
+    lstrcpyW(label, L"Scanlines on");
+    if (g_hotkey_registered) {
+        lstrcatW(label, L"\t");
+        lstrcatW(label, g_cfg.hotkey_text); /* hotkey_text is at most 39 chars */
+    }
+    AppendMenuW(m, MF_STRING | (g_cfg.enabled ? MF_CHECKED : 0), IDM_TOGGLE, label);
     AppendMenuW(m, MF_STRING | (g_cfg.exclude_from_capture ? MF_CHECKED : 0),
                 IDM_CAPTURE, L"Hide from screen capture");
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
@@ -246,6 +275,7 @@ static LRESULT CALLBACK ctrl_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         if (g_hotkey_registered) UnregisterHotKey(hwnd, ID_HOTKEY);
         destroy_overlays();
         tray_remove();
+        if (g_tray_icon) { DestroyIcon(g_tray_icon); g_tray_icon = NULL; }
         PostQuitMessage(0);
         return 0;
     }

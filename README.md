@@ -83,8 +83,10 @@ Output: `build\lineveil-<arch>.exe`
 ## Releasing
 
 1. Bump `res/version.h` (and the version in `res/lineveil.manifest`).
-2. Tag and push: `git tag v0.1.0 && git push origin v0.1.0`
-3. The release workflow builds all three architectures with MSVC, checks the tag matches `version.h`, writes checksums, attests provenance, and opens a **draft** release to review and publish.
+2. Either:
+   - **Actions → release → Run workflow**, choosing `draft` or `published`. The tag (`v0.1.0`) is taken from `version.h` and created on `main`. Or
+   - tag and push: `git tag v0.1.0 && git push origin v0.1.0`, which always opens a **draft**.
+3. The workflow builds all three architectures with MSVC, writes checksums, attests provenance, and creates the release.
 
 Actions are pinned to commit SHAs and kept current by Dependabot.
 

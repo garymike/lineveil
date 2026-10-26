@@ -1,6 +1,8 @@
-# scanlite
+# lineveil
 
 A featherweight scanline overlay for the Windows desktop.
+
+**[Live preview and config generator](https://garymike.github.io/lineveil/)**
 
 - 12 to 14 KB executable, no C runtime, no dependencies beyond Windows system DLLs
 - Runs on Windows 7 SP1 through 11, on x64, x86, and ARM64
@@ -17,7 +19,7 @@ Each monitor gets a borderless, layered, click-through, topmost window. A 32-bit
 
 ## Config
 
-On first run `%APPDATA%\scanlite\scanlite.ini` is created with defaults. For portable use, put a `scanlite.ini` next to the exe instead.
+On first run `%APPDATA%\lineveil\lineveil.ini` is created with defaults. For portable use, put a `lineveil.ini` next to the exe instead.
 
 | Key | Default | Notes |
 | --- | --- | --- |
@@ -40,7 +42,7 @@ Tray menu toggles are runtime only. The INI holds startup state.
 
 **MinGW-w64** (MSYS2 or cross-compile from Linux/macOS): `make ARCH=x64|x86|arm64`. ARM64 needs [llvm-mingw](https://github.com/mstorsjo/llvm-mingw).
 
-Output: `build\scanlite-<arch>.exe`
+Output: `build\lineveil-<arch>.exe`
 
 ## Known limits
 
@@ -58,6 +60,10 @@ Output: `build\scanlite-<arch>.exe`
 - [ ] Per-monitor settings
 - [ ] Code signing
 - [ ] macOS and Linux ports
+
+## Website
+
+The project page is `docs/index.html`, served by GitHub Pages (Settings > Pages > Deploy from branch `main`, folder `/docs`). It's one self-contained file with a strict CSP and no external requests.
 
 ## License
 

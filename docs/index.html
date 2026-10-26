@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lineveil: a featherweight scanline overlay for Windows</title>
+<meta name="description" content="A 14 KB scanline overlay for the Windows desktop. Zero CPU at idle, no screen capture, fully configurable.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --panel: #15181d;
+    --text: #e7e9ec;
+    --muted: #9aa3ad;
+    --accent: #7ee0b5;
+    --line: #262b33;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f5f1;
+      --panel: #ffffff;
+      --text: #16191d;
+      --muted: #5b636d;
+      --accent: #127a52;
+      --line: #dcdad3;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 var(--sans);
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 56px 16px 80px; }
+  h1 { font: 700 clamp(40px, 9vw, 64px)/1 var(--sans); letter-spacing: -0.03em; margin: 0 0 12px; }
+  h2 { font-size: 20px; margin: 48px 0 12px; }
+  p.lede { font-size: 19px; color: var(--muted); margin: 0 0 28px; max-width: 34em; }
+  a { color: var(--accent); }
+  code, pre { font-family: var(--mono); font-size: 14px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-block; padding: 11px 18px; border-radius: 8px;
+    border: 1px solid var(--line); color: var(--text); text-decoration: none;
+    font-weight: 600; background: var(--panel); cursor: pointer; font-size: 15px;
+  }
+  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .facts { list-style: none; padding: 0; margin: 28px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .facts li { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .facts b { display: block; font: 700 22px/1.2 var(--mono); }
+  .facts span { color: var(--muted); font-size: 14px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+  @media (max-width: 560px) { .controls { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 14px; color: var(--muted); }
+  label output { float: right; font-family: var(--mono); color: var(--text); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=color] { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: 6px; background: none; padding: 2px; }
+  select { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; margin: 16px 0 0; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-family: var(--mono); white-space: nowrap; padding-right: 16px; }
+  footer { margin-top: 64px; color: var(--muted); font-size: 14px; }
+
+  /* The live demo: the same pattern lineveil draws, as CSS. */
+  #veil {
+    position: fixed; inset: 0; pointer-events: none; z-index: 10;
+    transition: opacity .2s;
+  }
+  #veil.off { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="veil" aria-hidden="true"></div>
+<main>
+  <h1>Lineveil</h1>
+  <p class="lede">A featherweight scanline overlay for the Windows desktop. Drawn once, composited by Windows, then it gets out of the way.</p>
+  <div class="actions">
+    <a class="btn primary" href="https://github.com/garymike/lineveil/releases/latest">Download</a>
+    <a class="btn" href="https://github.com/garymike/lineveil">Source on GitHub</a>
+    <button class="btn" id="toggle" type="button" aria-pressed="true">Hide preview</button>
+  </div>
+
+  <ul class="facts">
+    <li><b>~14 KB</b><span>No runtime, no dependencies</span></li>
+    <li><b>0% CPU</b><span>Nothing redraws at idle</span></li>
+    <li><b>No capture</b><span>Never reads your screen</span></li>
+    <li><b>Win 7&ndash;11</b><span>x64, x86 and ARM64</span></li>
+  </ul>
+
+  <h2>Try it on this page</h2>
+  <div class="panel">
+    <div class="controls">
+      <label>Period <output id="o-period"></output>
+        <input type="range" id="period" min="2" max="16" value="3"></label>
+      <label>Thickness <output id="o-thickness"></output>
+        <input type="range" id="thickness" min="1" max="15" value="1"></label>
+      <label>Opacity <output id="o-opacity"></output>
+        <input type="range" id="opacity" min="0" max="255" value="80"></label>
+      <label>Color
+        <input type="color" id="color" value="#000000"></label>
+      <label>Orientation
+        <select id="orientation">
+          <option value="horizontal">Horizontal</option>
+          <option value="vertical">Vertical</option>
+        </select></label>
+    </div>
+    <pre id="ini" aria-label="Generated config"></pre>
+    <div class="row">
+      <span style="color:var(--muted);font-size:14px">Paste into <code>%APPDATA%\lineveil\lineveil.ini</code>. Changes apply on save.</span>
+      <button class="btn" id="copy" type="button">Copy config</button>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:14px">Browsers scale pages on high-DPI screens, so this preview can look softer than the real overlay, which always draws in physical pixels.</p>
+
+  <h2>How it works</h2>
+  <p>Each monitor gets one click-through, always-on-top layered window. Lineveil renders the line pattern once, hands it to the Windows compositor, and frees its own copy. From then on the process sleeps until you press the hotkey, change the config, or plug in a display.</p>
+  <p>Because it overlays rather than captures, it needs no screen-recording access and can't see what's on your screen. It's plain C with no C runtime, and config parsing is handled by Windows itself.</p>
+
+  <h2>Controls</h2>
+  <table>
+    <tr><td>Ctrl+Alt+F12</td><td>Toggle on or off (configurable)</td></tr>
+    <tr><td>Tray icon</td><td>Toggle, hide from screen capture, edit or reload config, exit</td></tr>
+    <tr><td>Double-click tray</td><td>Toggle</td></tr>
+  </table>
+
+  <h2>Limits</h2>
+  <p>Exclusive fullscreen games bypass the Windows compositor, so the overlay won't show there. Borderless fullscreen works. UAC prompts draw above everything by design.</p>
+
+  <footer>MIT licensed. Made by <a href="https://github.com/garymike">garymike</a>.</footer>
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var veil = $('veil');
+  var ids = ['period', 'thickness', 'opacity', 'color', 'orientation'];
+
+  function render() {
+    var period = +$('period').value;
+    var thick = $('thickness');
+    thick.max = period - 1;
+    if (+thick.value > period - 1) thick.value = period - 1;
+    var t = +thick.value;
+    var a = +$('opacity').value;
+    var hex = $('color').value.slice(1);
+    var vertical = $('orientation').value === 'vertical';
+    var r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+    var c = 'rgba(' + r + ',' + g + ',' + b + ',' + (a / 255).toFixed(3) + ')';
+
+    veil.style.background = 'repeating-linear-gradient(' + (vertical ? '90deg' : '180deg') + ',' +
+      c + ' 0px,' + c + ' ' + t + 'px,transparent ' + t + 'px,transparent ' + period + 'px)';
+
+    $('o-period').textContent = period + ' px';
+    $('o-thickness').textContent = t + ' px';
+    $('o-opacity').textContent = a;
+
+    $('ini').textContent =
+      '[lineveil]\n' +
+      'period=' + period + '\n' +
+      'thickness=' + t + '\n' +
+      'opacity=' + a + '\n' +
+      'color=' + hex.toUpperCase() + '\n' +
+      'orientation=' + (vertical ? 'vertical' : 'horizontal') + '\n';
+  }
+
+  ids.forEach(function (id) { $(id).addEventListener('input', render); });
+
+  $('toggle').addEventListener('click', function () {
+    var off = veil.classList.toggle('off');
+    this.textContent = off ? 'Show preview' : 'Hide preview';
+    this.setAttribute('aria-pressed', String(!off));
+  });
+
+  $('copy').addEventListener('click', function () {
+    var btn = this, text = $('ini').textContent;
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy config'; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

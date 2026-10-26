@@ -25,8 +25,8 @@ jobs:
         run: build.bat ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
-          name: scanlite-msvc-${{ matrix.arch }}
-          path: build/scanlite-${{ matrix.arch }}.exe
+          name: lineveil-msvc-${{ matrix.arch }}
+          path: build/lineveil-${{ matrix.arch }}.exe
 
   mingw:
     runs-on: ubuntu-latest
@@ -44,5 +44,5 @@ jobs:
         run: make ARCH=${{ matrix.arch }} && ls -l build/
       - uses: actions/upload-artifact@v4
         with:
-          name: scanlite-mingw-${{ matrix.arch }}
-          path: build/scanlite-${{ matrix.arch }}.exe
+          name: lineveil-mingw-${{ matrix.arch }}
+          path: build/lineveil-${{ matrix.arch }}.exe

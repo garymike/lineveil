@@ -1,5 +1,5 @@
-#ifndef SCANLITE_RENDER_H
-#define SCANLITE_RENDER_H
+#ifndef LINEVEIL_RENDER_H
+#define LINEVEIL_RENDER_H
 
 #include <windows.h>
 #include "config.h"

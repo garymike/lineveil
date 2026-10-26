@@ -8,8 +8,8 @@
  */
 #include "config.h"
 
-#define SECTION L"scanlite"
-#define INI_NAME L"scanlite.ini"
+#define SECTION L"lineveil"
+#define INI_NAME L"lineveil.ini"
 
 static wchar_t g_path[MAX_PATH];
 static wchar_t g_dir[MAX_PATH];
@@ -17,10 +17,10 @@ static BOOL g_have_path;
 static FILETIME g_last_write;
 
 static const char DEFAULT_INI[] =
-    "; scanlite configuration\r\n"
+    "; lineveil configuration\r\n"
     "; Saved changes are picked up automatically.\r\n"
     "\r\n"
-    "[scanlite]\r\n"
+    "[lineveil]\r\n"
     "; 1 = overlay on at startup\r\n"
     "enabled=1\r\n"
     "\r\n"
@@ -110,7 +110,7 @@ void config_init(void) {
     g_have_path = FALSE;
     g_path[0] = g_dir[0] = 0;
 
-    /* 1. Portable mode: scanlite.ini next to the exe. */
+    /* 1. Portable mode: lineveil.ini next to the exe. */
     n = GetModuleFileNameW(NULL, exe, MAX_PATH);
     if (n > 0 && n < MAX_PATH) {
         for (i = (int)n - 1; i >= 0 && exe[i] != L'\\'; i--) {}
@@ -126,11 +126,11 @@ void config_init(void) {
         }
     }
 
-    /* 2. Per-user: %APPDATA%\scanlite\scanlite.ini */
+    /* 2. Per-user: %APPDATA%\lineveil\lineveil.ini */
     if (!g_have_path) {
         wchar_t appdata[MAX_PATH];
         n = GetEnvironmentVariableW(L"APPDATA", appdata, MAX_PATH);
-        if (n > 0 && n < MAX_PATH && join(g_dir, appdata, L"\\scanlite")) {
+        if (n > 0 && n < MAX_PATH && join(g_dir, appdata, L"\\lineveil")) {
             CreateDirectoryW(g_dir, NULL); /* ok if it already exists */
             if (join(g_path, g_dir, L"\\" INI_NAME)) {
                 g_have_path = TRUE;

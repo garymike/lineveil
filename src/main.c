@@ -1,4 +1,4 @@
-/* scanlite: a featherweight scanline overlay for the Windows desktop.
+/* lineveil: a featherweight scanline overlay for the Windows desktop.
  *
  * Architecture
  *   - One hidden top-level "controller" window owns the tray icon, hotkey,
@@ -18,10 +18,10 @@
 #include "config.h"
 #include "render.h"
 
-#define APP_NAME        L"scanlite"
-#define CTRL_CLASS      L"scanlite.controller"
-#define OVERLAY_CLASS   L"scanlite.overlay"
-#define MUTEX_NAME      L"Local\\scanlite.single-instance"
+#define APP_NAME        L"lineveil"
+#define CTRL_CLASS      L"lineveil.controller"
+#define OVERLAY_CLASS   L"lineveil.overlay"
+#define MUTEX_NAME      L"Local\\lineveil.single-instance"
 #define MAX_MONITORS    16
 
 #define WM_TRAY         (WM_APP + 1)

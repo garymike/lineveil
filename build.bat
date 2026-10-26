@@ -1,8 +1,8 @@
 @echo off
 rem MSVC build, no CRT.
-rem   build.bat            -> build\scanlite-x64.exe
-rem   build.bat x86        -> build\scanlite-x86.exe
-rem   build.bat arm64      -> build\scanlite-arm64.exe
+rem   build.bat            -> build\lineveil-x64.exe
+rem   build.bat x86        -> build\lineveil-x86.exe
+rem   build.bat arm64      -> build\lineveil-arm64.exe
 rem Sets up the Visual Studio environment for the target automatically.
 setlocal
 
@@ -37,10 +37,10 @@ rem /SAFESEH:NO on x86: we have no exception handlers and no CRT, so there is
 rem no SEH table to register. CET and ASLR still apply.
 cl /nologo /O1 /Os /GS- /Gs9999999 /W4 /std:c11 ^
    /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /DWINVER=0x0A00 ^
-   /Fobuild\obj-%ARCH%\ /Fe:build\scanlite-%ARCH%.exe src\*.c ^
+   /Fobuild\obj-%ARCH%\ /Fe:build\lineveil-%ARCH%.exe src\*.c ^
    /link /NODEFAULTLIB /ENTRY:entry /SUBSYSTEM:WINDOWS ^
    /DYNAMICBASE /NXCOMPAT %ARCH_LINK% /OPT:REF /OPT:ICF /DEBUG:NONE ^
    kernel32.lib user32.lib gdi32.lib shell32.lib
 
 if errorlevel 1 exit /b 1
-for %%f in (build\scanlite-%ARCH%.exe) do echo Built %%~ff (%%~zf bytes)
+for %%f in (build\lineveil-%ARCH%.exe) do echo Built %%~ff (%%~zf bytes)

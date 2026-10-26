@@ -1,7 +1,7 @@
 # MinGW-w64 build (native on Windows via MSYS2, or cross-compile from Linux/macOS).
-#   make                 -> build/scanlite-x64.exe
-#   make ARCH=x86        -> build/scanlite-x86.exe
-#   make ARCH=arm64      -> build/scanlite-arm64.exe   (needs llvm-mingw)
+#   make                 -> build/lineveil-x64.exe
+#   make ARCH=x86        -> build/lineveil-x86.exe
+#   make ARCH=arm64      -> build/lineveil-arm64.exe   (needs llvm-mingw)
 #   make all-arch        -> all three
 #   make CC=gcc          -> override compiler, e.g. native MSYS2
 
@@ -37,7 +37,7 @@ CC := $(TOOL_CC)
 endif
 STRIP ?= $(TRIPLE)-strip
 
-OUT := build/scanlite-$(ARCH).exe
+OUT := build/lineveil-$(ARCH).exe
 SRC := $(wildcard src/*.c)
 HDR := $(wildcard src/*.h)
 

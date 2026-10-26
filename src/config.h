@@ -1,5 +1,5 @@
-#ifndef SCANLITE_CONFIG_H
-#define SCANLITE_CONFIG_H
+#ifndef LINEVEIL_CONFIG_H
+#define LINEVEIL_CONFIG_H
 
 #include <windows.h>
 
@@ -18,7 +18,7 @@ typedef struct Config {
     UINT  hotkey_vk;            /* virtual-key code, decimal (F12 = 123) */
 } Config;
 
-/* Resolves the config path (portable next to exe, else %APPDATA%\scanlite)
+/* Resolves the config path (portable next to exe, else %APPDATA%\lineveil)
    and writes a default file if none exists. */
 void config_init(void);
 

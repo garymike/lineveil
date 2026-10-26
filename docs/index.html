@@ -84,6 +84,7 @@
   <p class="lede">A featherweight scanline overlay for the Windows desktop. Drawn once, composited by Windows, then it gets out of the way.</p>
   <div class="actions">
     <a class="btn primary" href="https://github.com/garymike/lineveil/releases/latest">Download</a>
+    <a class="btn" href="https://github.com/garymike/lineveil/releases/latest" title="Unzip anywhere; settings stay in the folder">Portable zip</a>
     <a class="btn" href="https://github.com/garymike/lineveil">Source on GitHub</a>
     <button class="btn" id="toggle" type="button" aria-pressed="true">Hide preview</button>
   </div>
@@ -132,6 +133,7 @@
 
   <h2>How it works</h2>
   <p>Each monitor gets one click-through, always-on-top layered window. Lineveil renders the line pattern once, hands it to the Windows compositor, and frees its own copy. From then on the process sleeps until you press the hotkey, change the config, or plug in a display.</p>
+  <p>There's no installer. The exe keeps its settings in your user profile; the portable zip keeps them in the folder beside it and writes nothing else to the computer, so it can live on a USB stick.</p>
   <p>Because it overlays rather than captures, it needs no screen-recording access and can't see what's on your screen. It's plain C with no C runtime, and config parsing is handled by Windows itself.</p>
 
   <h2>Controls</h2>

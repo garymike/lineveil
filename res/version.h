@@ -2,7 +2,7 @@
    that the pushed tag (vMAJOR.MINOR.PATCH) matches these numbers. */
 #define LV_VERSION_MAJOR 0
 #define LV_VERSION_MINOR 1
-#define LV_VERSION_PATCH 0
+#define LV_VERSION_PATCH 1
 
 #define LV_STR2(x) #x
 #define LV_STR(x) LV_STR2(x)

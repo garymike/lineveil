@@ -73,7 +73,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: res/version.h
+          sparse-checkout: |
+            res/version.h
+            res/lineveil.ini
+            res/portable-readme.txt
+            LICENSE
           sparse-checkout-cone-mode: false
 
       - name: Resolve version and release mode
@@ -114,24 +118,41 @@ jobs:
           merge-multiple: true
           path: dist
 
-      - name: Name binaries and write checksums
+      - name: Name binaries, build portable zips, write checksums
         env:
           TAG: ${{ steps.v.outputs.tag }}
         run: |
           set -euo pipefail
           ver="$TAG"
-          cd dist
+          # Fixed timestamps so the zips are reproducible from the same inputs.
+          stamp=$(git log -1 --format=%cd --date=format:%Y%m%d%H%M.%S 2>/dev/null || echo 202601010000.00)
           for a in x64 x86 arm64; do
-            mv "lineveil-$a.exe" "lineveil-$ver-windows-$a.exe"
+            exe="dist/lineveil-$ver-windows-$a.exe"
+            mv "dist/lineveil-$a.exe" "$exe"
+            # Portable: the ini next to the exe switches Lineveil to portable
+            # mode, so it keeps settings there and writes nothing else.
+            stage="stage/Lineveil"
+            rm -rf stage && mkdir -p "$stage"
+            cp "$exe" "$stage/lineveil.exe"
+            cp res/lineveil.ini "$stage/lineveil.ini"
+            cp res/portable-readme.txt "$stage/README.txt"
+            sed 's/$/\r/' LICENSE > "$stage/LICENSE.txt"
+            find stage -exec touch -t "$stamp" {} +
+            (cd stage && zip -X -q -r "../dist/lineveil-$ver-windows-$a-portable.zip" Lineveil)
+            unzip -l "dist/lineveil-$ver-windows-$a-portable.zip"
           done
-          sha256sum -- *.exe > SHA256SUMS.txt
+          rm -rf stage
+          cd dist
+          sha256sum -- *.exe *.zip > SHA256SUMS.txt
           cat SHA256SUMS.txt
           ls -l
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: dist/*.exe
+          subject-path: |
+            dist/*.exe
+            dist/*.zip
 
       - name: Create release
         if: steps.v.outputs.mode != 'none'
@@ -148,8 +169,11 @@ jobs:
           Pick the build for your machine. Most PCs are **x64**; Surface Pro X and
           other Snapdragon PCs are **arm64**; **x86** is for 32-bit Windows.
 
-          No installer: run the exe. It starts in the tray. Config lives at
-          \`%APPDATA%\\lineveil\\lineveil.ini\`.
+          - **\`.exe\`**: run it, no installer. It starts in the tray and keeps its
+            config in \`%APPDATA%\\lineveil\\lineveil.ini\`.
+          - **\`-portable.zip\`**: unzip anywhere (a USB stick, a synced folder) and
+            run \`lineveil.exe\`. Settings stay in the \`lineveil.ini\` beside it and
+            nothing else is written to the computer.
 
           ## Verify
 

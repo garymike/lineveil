@@ -101,6 +101,7 @@ test:
 	$(HOSTCC) $(TEST_FLAGS) tests/test_pattern.c src/pattern.c -o build/test_pattern
 	./build/test_hotkey
 	./build/test_pattern
+	python3 tools/default_ini.py
 
 # Coverage-guided fuzzing of the hotkey parser (needs clang). FUZZ_TIME in seconds.
 FUZZ_TIME ?= 60

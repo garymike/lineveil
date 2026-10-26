@@ -2,7 +2,7 @@
 
 A featherweight scanline overlay for the Windows desktop.
 
-**[Live preview and config generator](https://garymike.github.io/lineveil/)** · **[Download](https://github.com/garymike/lineveil/releases/latest)**
+**[Live preview and config generator](https://garymike.github.io/lineveil/)** · **[Download](https://github.com/garymike/lineveil/releases/latest)** (exe or portable zip)
 
 - ~30 KB executable (icon included), no C/C++ runtime, imports only four core Windows DLLs
 - Runs on Windows 7 SP1 through 11, on x64, x86, and ARM64
@@ -24,7 +24,9 @@ Two renderers:
 
 ## Config
 
-On first run `%APPDATA%\lineveil\lineveil.ini` is created with defaults. For portable use, put a `lineveil.ini` next to the exe instead.
+On first run `%APPDATA%\lineveil\lineveil.ini` is created with defaults.
+
+**Portable mode:** if a `lineveil.ini` sits next to the exe, Lineveil uses that file and writes nothing else to the computer (no registry, no AppData). Each release includes a `-portable.zip` per architecture that's set up this way; unzip it anywhere, such as a USB stick or a synced folder. Delete the ini and it falls back to normal mode.
 
 | Key | Default | Notes |
 | --- | --- | --- |

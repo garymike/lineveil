@@ -58,16 +58,19 @@ static BOOL gdi_apply(HWND hwnd, int w, int h, const Config *c) {
     base = (DWORD *)bits;
     if (!c->vertical) {
         for (y = 0; y < h; y++) {
-            if (y % c->period < c->thickness) {
+            if (pattern_on(c, h, y)) {
                 DWORD *row = base + (SIZE_T)y * (SIZE_T)w;
                 for (x = 0; x < w; x++) row[x] = px;
             }
         }
     } else {
-        for (y = 0; y < h; y++) {
+        /* Build the first row, then copy it down: the pattern is evaluated
+           w times instead of w * h. */
+        for (x = 0; x < w; x++)
+            if (pattern_on(c, w, x)) base[x] = px;
+        for (y = 1; y < h; y++) {
             DWORD *row = base + (SIZE_T)y * (SIZE_T)w;
-            for (x = 0; x < w; x++)
-                if (x % c->period < c->thickness) row[x] = px;
+            for (x = 0; x < w; x++) row[x] = base[x];
         }
     }
 

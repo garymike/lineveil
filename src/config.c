@@ -24,10 +24,25 @@ static const char DEFAULT_INI[] =
     "; 1 = overlay on at startup\r\n"
     "enabled=1\r\n"
     "\r\n"
-    "; Distance in pixels from one line to the next (2..64)\r\n"
+    "; --- Line spacing: pick ONE of the three styles below ---\r\n"
+    ";\r\n"
+    "; 1. Preset: the line count of a real video standard, the same on every\r\n"
+    ";    monitor whatever its resolution:\r\n"
+    ";      224p  arcade boards, much of SNES\r\n"
+    ";      240p  NES, Genesis, PS1 and other NTSC consoles\r\n"
+    ";      288p  PAL consoles\r\n"
+    ";      480   VGA 640x480, 480i/480p video\r\n"
+    "preset=\r\n"
+    ";\r\n"
+    "; 2. Custom line count (16..2160). Overrides preset.\r\n"
+    "lines=\r\n"
+    ";\r\n"
+    ";    With preset or lines: percent of each line cycle that is dark (10..90).\r\n"
+    "fill=50\r\n"
+    ";\r\n"
+    "; 3. Fixed pixel spacing, used when preset and lines are empty.\r\n"
+    ";    Distance from one line to the next (2..64) and line thickness.\r\n"
     "period=3\r\n"
-    "\r\n"
-    "; Line thickness in pixels (1..period-1)\r\n"
     "thickness=1\r\n"
     "\r\n"
     "; Line opacity 0..255\r\n"
@@ -153,6 +168,9 @@ void config_load(Config *c) {
     c->enabled = 1;
     c->period = 3;
     c->thickness = 1;
+    c->preset = PRESET_NONE;
+    c->lines = 0;
+    c->fill = 50;
     c->opacity = 80;
     c->color = 0x000000;
     c->vertical = 0;
@@ -167,6 +185,23 @@ void config_load(Config *c) {
     c->enabled   = GetPrivateProfileIntW(SECTION, L"enabled", c->enabled, g_path) != 0;
     c->period    = clampi((int)GetPrivateProfileIntW(SECTION, L"period", c->period, g_path), 2, 64);
     c->thickness = clampi((int)GetPrivateProfileIntW(SECTION, L"thickness", c->thickness, g_path), 1, c->period - 1);
+    {
+        /* An empty "fill=" reads as 0; treat that as unset, not as 10%. */
+        int fill = (int)GetPrivateProfileIntW(SECTION, L"fill", c->fill, g_path);
+        c->fill = fill == 0 ? 50 : clampi(fill, 10, 90);
+    }
+
+    /* Spacing style: lines > preset > pixel. An unknown preset name falls
+       back to pixel mode rather than guessing. */
+    GetPrivateProfileStringW(SECTION, L"preset", L"", buf, 32, g_path);
+    config_set_preset(c, preset_from_name(buf));
+    {
+        int lines = (int)GetPrivateProfileIntW(SECTION, L"lines", 0, g_path);
+        if (lines > 0) {
+            c->preset = PRESET_NONE;
+            c->lines = clampi(lines, 16, 2160);
+        }
+    }
     c->opacity   = clampi((int)GetPrivateProfileIntW(SECTION, L"opacity", c->opacity, g_path), 0, 255);
 
     GetPrivateProfileStringW(SECTION, L"color", L"000000", buf, 32, g_path);

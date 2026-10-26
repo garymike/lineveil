@@ -56,6 +56,8 @@
   .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
   @media (max-width: 560px) { .controls { grid-template-columns: 1fr; } }
   label { display: block; font-size: 14px; color: var(--muted); }
+  label.wide { grid-column: 1 / -1; }
+  [hidden] { display: none !important; }
   label output { float: right; font-family: var(--mono); color: var(--text); }
   input[type=range] { width: 100%; accent-color: var(--accent); }
   input[type=color] { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: 6px; background: none; padding: 2px; }
@@ -87,7 +89,7 @@
   </div>
 
   <ul class="facts">
-    <li><b>~28 KB</b><span>No runtime, no dependencies</span></li>
+    <li><b>~30 KB</b><span>No runtime, no dependencies</span></li>
     <li><b>0% CPU</b><span>Nothing redraws at idle</span></li>
     <li><b>No capture</b><span>Never reads your screen</span></li>
     <li><b>Win 7&ndash;11</b><span>x64, x86 and ARM64</span></li>
@@ -96,9 +98,19 @@
   <h2>Try it on this page</h2>
   <div class="panel">
     <div class="controls">
-      <label>Period <output id="o-period"></output>
+      <label class="wide">Line style
+        <select id="style">
+          <option value="224p">224p (arcade boards, SNES)</option>
+          <option value="240p" selected>240p (NES, Genesis, PS1)</option>
+          <option value="288p">288p (PAL consoles)</option>
+          <option value="480">480 (VGA, SD video)</option>
+          <option value="pixel">Fixed pixel spacing</option>
+        </select></label>
+      <label id="l-fill">Line fill <output id="o-fill"></output>
+        <input type="range" id="fill" min="10" max="90" value="50"></label>
+      <label id="l-period" hidden>Period <output id="o-period"></output>
         <input type="range" id="period" min="2" max="16" value="3"></label>
-      <label>Thickness <output id="o-thickness"></output>
+      <label id="l-thickness" hidden>Thickness <output id="o-thickness"></output>
         <input type="range" id="thickness" min="1" max="15" value="1"></label>
       <label>Opacity <output id="o-opacity"></output>
         <input type="range" id="opacity" min="0" max="255" value="80"></label>
@@ -116,7 +128,7 @@
       <button class="btn" id="copy" type="button">Copy config</button>
     </div>
   </div>
-  <p style="color:var(--muted);font-size:14px">Browsers scale pages on high-DPI screens, so this preview can look softer than the real overlay, which always draws in physical pixels.</p>
+  <p style="color:var(--muted);font-size:14px">Presets set a line count, not a pixel size: 240p means 240 lines from the top of each monitor to the bottom, whatever its resolution. Here that's measured across this browser window, so the preview is an approximation. Browsers also scale pages on high-DPI screens, so it can look softer than the real overlay, which always draws in physical pixels.</p>
 
   <h2>How it works</h2>
   <p>Each monitor gets one click-through, always-on-top layered window. Lineveil renders the line pattern once, hands it to the Windows compositor, and frees its own copy. From then on the process sleeps until you press the hotkey, change the config, or plug in a display.</p>
@@ -125,7 +137,7 @@
   <h2>Controls</h2>
   <table>
     <tr><td>Ctrl+Alt+F12</td><td>Toggle on or off (configurable)</td></tr>
-    <tr><td>Tray icon</td><td>Toggle, hide from screen capture, edit or reload config, exit</td></tr>
+    <tr><td>Tray icon</td><td>Toggle, switch line style (presets), hide from screen capture, edit or reload config, exit</td></tr>
     <tr><td>Double-click tray</td><td>Toggle</td></tr>
   </table>
 
@@ -138,37 +150,60 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var veil = $('veil');
-  var ids = ['period', 'thickness', 'opacity', 'color', 'orientation'];
+  var ids = ['style', 'fill', 'period', 'thickness', 'opacity', 'color', 'orientation'];
+  var LINES = { '224p': 224, '240p': 240, '288p': 288, '480': 480 };
 
   function render() {
+    var style = $('style').value;
+    var preset = style !== 'pixel';
     var period = +$('period').value;
     var thick = $('thickness');
     thick.max = period - 1;
     if (+thick.value > period - 1) thick.value = period - 1;
     var t = +thick.value;
+    var fill = +$('fill').value;
     var a = +$('opacity').value;
     var hex = $('color').value.slice(1);
     var vertical = $('orientation').value === 'vertical';
     var r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
     var c = 'rgba(' + r + ',' + g + ',' + b + ',' + (a / 255).toFixed(3) + ')';
 
-    veil.style.background = 'repeating-linear-gradient(' + (vertical ? '90deg' : '180deg') + ',' +
-      c + ' 0px,' + c + ' ' + t + 'px,transparent ' + t + 'px,transparent ' + period + 'px)';
+    $('l-fill').hidden = !preset;
+    $('l-period').hidden = preset;
+    $('l-thickness').hidden = preset;
 
+    var cycle, dark;
+    if (preset) {
+      /* Same rule as the app: N lines across the screen, at least 2 px per cycle. */
+      var extent = vertical ? window.innerWidth : window.innerHeight;
+      var n = Math.min(LINES[style], Math.floor(extent / 2));
+      cycle = extent / n;
+      dark = Math.min(Math.max(cycle * fill / 100, 1), cycle - 1);
+    } else {
+      cycle = period;
+      dark = t;
+    }
+    veil.style.background = 'repeating-linear-gradient(' + (vertical ? '90deg' : '180deg') + ',' +
+      c + ' 0px,' + c + ' ' + dark.toFixed(3) + 'px,transparent ' + dark.toFixed(3) + 'px,transparent ' +
+      cycle.toFixed(3) + 'px)';
+
+    $('o-fill').textContent = fill + '%';
     $('o-period').textContent = period + ' px';
     $('o-thickness').textContent = t + ' px';
     $('o-opacity').textContent = a;
 
     $('ini').textContent =
       '[lineveil]\n' +
-      'period=' + period + '\n' +
-      'thickness=' + t + '\n' +
+      (preset
+        ? 'preset=' + style + '\n' + 'fill=' + fill + '\n'
+        : 'preset=\n' + 'period=' + period + '\n' + 'thickness=' + t + '\n') +
       'opacity=' + a + '\n' +
       'color=' + hex.toUpperCase() + '\n' +
       'orientation=' + (vertical ? 'vertical' : 'horizontal') + '\n';
   }
 
   ids.forEach(function (id) { $(id).addEventListener('input', render); });
+  window.addEventListener('resize', render);
 
   $('toggle').addEventListener('click', function () {
     var off = veil.classList.toggle('off');

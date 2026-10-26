@@ -98,7 +98,9 @@ TEST_FLAGS := -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
 test:
 	@mkdir -p build
 	$(HOSTCC) $(TEST_FLAGS) tests/test_hotkey.c src/hotkey.c -o build/test_hotkey
+	$(HOSTCC) $(TEST_FLAGS) tests/test_pattern.c src/pattern.c -o build/test_pattern
 	./build/test_hotkey
+	./build/test_pattern
 
 # Coverage-guided fuzzing of the hotkey parser (needs clang). FUZZ_TIME in seconds.
 FUZZ_TIME ?= 60

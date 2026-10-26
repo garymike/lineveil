@@ -35,6 +35,9 @@
 #define IDM_EDITCFG     102
 #define IDM_RELOAD      103
 #define IDM_EXIT        104
+#define IDM_STYLE_PIXEL 110             /* fixed pixel spacing from the ini */
+#define IDM_PRESET_BASE 111             /* + PRESET_* (1..PRESET_COUNT-1) */
+#define IDM_STYLE_CUSTOM 130            /* custom line count (display only) */
 
 #ifndef WDA_EXCLUDEFROMCAPTURE
 #define WDA_EXCLUDEFROMCAPTURE 0x00000011
@@ -174,10 +177,57 @@ static void toggle(void) {
     build_overlays();
 }
 
+/* Appends a non-negative int as decimal. No CRT, so no wsprintf needed. */
+static void append_uint(wchar_t *out, unsigned v) {
+    wchar_t tmp[12];
+    int n = 0, len = lstrlenW(out);
+    do { tmp[n++] = (wchar_t)(L'0' + v % 10); v /= 10; } while (v && n < 11);
+    while (n) out[len++] = tmp[--n];
+    out[len] = 0;
+}
+
+/* "Line style" submenu: switch presets live. Runtime only, like the other
+   tray toggles; the ini still decides the style at startup and on reload. */
+static HMENU build_style_menu(void) {
+    static const wchar_t *const HINTS[PRESET_COUNT] = {
+        0, L"Arcade, SNES", L"NES, Genesis, PS1", L"PAL consoles", L"VGA, SD video"
+    };
+    wchar_t label[64];
+    int p;
+    HMENU s = CreatePopupMenu();
+    if (!s) return NULL;
+
+    if (g_cfg.lines > 0 && g_cfg.preset == PRESET_NONE) {
+        lstrcpyW(label, L"Custom: ");
+        append_uint(label, (unsigned)g_cfg.lines);
+        lstrcatW(label, L" lines");
+        AppendMenuW(s, MF_STRING | MF_CHECKED | MF_GRAYED, IDM_STYLE_CUSTOM, label);
+    }
+    for (p = PRESET_NONE + 1; p < PRESET_COUNT; p++) {
+        lstrcpyW(label, preset_name(p));
+        lstrcatW(label, L"\t");
+        lstrcatW(label, HINTS[p]);
+        AppendMenuW(s, MF_STRING | (g_cfg.preset == p ? MF_CHECKED : 0), IDM_PRESET_BASE + p, label);
+    }
+    AppendMenuW(s, MF_SEPARATOR, 0, NULL);
+    lstrcpyW(label, L"Fixed: every ");
+    append_uint(label, (unsigned)g_cfg.period);
+    lstrcatW(label, L" px");
+    AppendMenuW(s, MF_STRING | (g_cfg.lines == 0 ? MF_CHECKED : 0), IDM_STYLE_PIXEL, label);
+
+    /* Radio bullets instead of check marks for the active choice. */
+    CheckMenuRadioItem(s, IDM_STYLE_PIXEL, IDM_STYLE_CUSTOM,
+                       g_cfg.lines == 0 ? IDM_STYLE_PIXEL
+                       : g_cfg.preset != PRESET_NONE ? (UINT)(IDM_PRESET_BASE + g_cfg.preset)
+                       : IDM_STYLE_CUSTOM, MF_BYCOMMAND);
+    return s;
+}
+
 static void tray_menu(void) {
     POINT pt;
     UINT cmd;
     wchar_t label[64];
+    HMENU style;
     HMENU m = CreatePopupMenu();
     if (!m) return;
 
@@ -188,6 +238,8 @@ static void tray_menu(void) {
         lstrcatW(label, g_cfg.hotkey_text); /* hotkey_text is at most 39 chars */
     }
     AppendMenuW(m, MF_STRING | (g_cfg.enabled ? MF_CHECKED : 0), IDM_TOGGLE, label);
+    style = build_style_menu();
+    if (style) AppendMenuW(m, MF_POPUP, (UINT_PTR)style, L"Line style");
     AppendMenuW(m, MF_STRING | (g_cfg.exclude_from_capture ? MF_CHECKED : 0),
                 IDM_CAPTURE, L"Hide from screen capture");
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
@@ -215,6 +267,16 @@ static void tray_menu(void) {
         break;
     case IDM_RELOAD:  reload_all(); break;
     case IDM_EXIT:    DestroyWindow(g_ctrl); break;
+    case IDM_STYLE_PIXEL:
+        config_set_preset(&g_cfg, PRESET_NONE);
+        build_overlays();
+        break;
+    default:
+        if (cmd > IDM_PRESET_BASE && cmd < IDM_PRESET_BASE + PRESET_COUNT) {
+            config_set_preset(&g_cfg, (int)(cmd - IDM_PRESET_BASE));
+            build_overlays();
+        }
+        break;
     }
 }
 

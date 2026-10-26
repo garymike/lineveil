@@ -127,7 +127,7 @@ BOOL fill_surface(IDCompositionSurface *surface, int sw, int sh, const Config *c
     buf = (DWORD *)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)n * sizeof(DWORD));
     if (!buf) return FALSE;
     for (int i = 0; i < n; i++)
-        buf[i] = (i % c->period < c->thickness) ? px : 0;
+        buf[i] = pattern_on(c, n, i) ? px : 0;
 
     hr = surface->BeginDraw(0, __uuidof(ID3D11Texture2D), (void **)&tex, &off);
     if (SUCCEEDED(hr)) {

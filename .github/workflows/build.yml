@@ -1,0 +1,40 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  msvc:
+    runs-on: windows-latest
+    steps:
+      # TODO: pin actions to full commit SHAs before first release
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build (MSVC, no CRT)
+        shell: cmd
+        run: build.bat
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scanlite-msvc-x64
+          path: build/scanlite.exe
+
+  mingw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install MinGW-w64
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+      - name: Build (MinGW cross)
+        run: make && ls -l build/scanlite.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scanlite-mingw-x64
+          path: build/scanlite.exe

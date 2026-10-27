@@ -1,0 +1,12 @@
+# Declare the intended visibility and purpose of this repo.
+# The github-security-audit skill checks this against actual GitHub settings
+# and flags any mismatch as a finding.
+#
+# visibility: public | private
+# purpose: free-text description of what this repo is for
+
+visibility: public
+purpose: >
+  Lineveil, a featherweight scanline overlay for the Windows desktop. Open-source
+  Win32 C with no C runtime, released as checksummed binaries with Sigstore build
+  provenance, plus a GitHub Pages preview and config generator.

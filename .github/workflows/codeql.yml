@@ -1,0 +1,47 @@
+name: CodeQL analysis
+
+# CodeQL's built-in languages are:
+#   actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift
+# This repo has C/C++ under src/ and tests/, Python under tools/, and the
+# workflow files themselves. `build-mode: none` extracts the C sources without
+# the MinGW or MSVC toolchains the real build needs, so this job never has to
+# reproduce build.bat or the cross-compile Makefile.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    # Bound, because the CodeQL default is 360 minutes.
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write   # upload results to code scanning
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, cpp, python]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@f58f0d11ebf5dedd870fab2f999275f7602cfa46 # codeql-bundle-v2.26.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@f58f0d11ebf5dedd870fab2f999275f7602cfa46 # codeql-bundle-v2.26.0

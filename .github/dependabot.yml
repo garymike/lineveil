@@ -6,6 +6,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Held for seven days so a freshly published version has time to be yanked
+    # before it lands here. Same shape as every other repo's dependabot.yml.
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]

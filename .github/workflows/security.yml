@@ -32,7 +32,7 @@ jobs:
       contents: read
       packages: read       # reusable pulls the pinned betterleaks image from GHCR
       pull-requests: read
-    uses: garymike/security-workflows/.github/workflows/security-scan.yml@976ef61d7b3858ecd50cf786a82d40915a286898 # main @ 2026-10-21
+    uses: garymike/security-workflows/.github/workflows/security-scan.yml@2d15ded362058a997f4d1cfe843a6faedb74f80c # main @ 2026-10-21
 
   gha-security:
     # zizmor + actionlint over .github/workflows: injection, excessive permissions,
@@ -40,7 +40,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: garymike/security-workflows/.github/workflows/gha-security.yml@976ef61d7b3858ecd50cf786a82d40915a286898 # main @ 2026-10-21
+    uses: garymike/security-workflows/.github/workflows/gha-security.yml@2d15ded362058a997f4d1cfe843a6faedb74f80c # main @ 2026-10-21
 
   sast:
     # Semgrep p/default over the C sources under src/ and tests/ and the Python
@@ -49,7 +49,7 @@ jobs:
       contents: read
       packages: read
       security-events: write   # public repo: SARIF upload to code scanning stays on
-    uses: garymike/security-workflows/.github/workflows/sast.yml@976ef61d7b3858ecd50cf786a82d40915a286898 # main @ 2026-10-21
+    uses: garymike/security-workflows/.github/workflows/sast.yml@2d15ded362058a997f4d1cfe843a6faedb74f80c # main @ 2026-10-21
 
   # No iac-security job: the tree carries no Dockerfile, compose file, Bicep or
   # Terraform for Checkov to read. Add it back if any of those arrive.
@@ -58,4 +58,4 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-    uses: garymike/security-workflows/.github/workflows/security-audit.yml@976ef61d7b3858ecd50cf786a82d40915a286898 # main @ 2026-10-21
+    uses: garymike/security-workflows/.github/workflows/security-audit.yml@2d15ded362058a997f4d1cfe843a6faedb74f80c # main @ 2026-10-21
